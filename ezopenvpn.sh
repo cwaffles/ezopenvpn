@@ -52,12 +52,21 @@ if [ -e /etc/openvpn/server.conf ]; then
 			echo "Tell me a name for the client cert"
 			echo "Please, use one word only, no special characters"
 			read -p "Client name: " -e -i client CLIENT
+			echo ""
+		        echo "Do you like secure ${CLIENT}'s  private key with password?"
+        		read -p "Use password for private key [y/n]:" -e -i y USEPASS
 			cd /etc/openvpn/easy-rsa/2.0/
 			source ./vars
 			# build-key for the client
 			export KEY_CN="$CLIENT"
 			export EASY_RSA="${EASY_RSA:-.}"
-			"$EASY_RSA/pkitool" $CLIENT
+			if [ $USEPASS = 'y' ]; 
+			then
+				"$EASY_RSA/pkitool" --pass $CLIENT
+			else
+				"$EASY_RSA/pkitool" $CLIENT 
+        		fi
+			#"$EASY_RSA/pkitool" $CLIENT
 			# Let's generate the client config
 			mkdir ~/ovpn-$CLIENT
 			cp /usr/share/doc/openvpn/examples/sample-config-files/client.conf ~/ovpn-$CLIENT/$CLIENT.conf
@@ -88,11 +97,11 @@ if [ -e /etc/openvpn/server.conf ]; then
 			cat $CLIENT.key >> $CLIENT.ovpn
 			echo -e "</key>\n" >> $CLIENT.ovpn
 			
-			tar -czf ../ovpn-$CLIENT.tar.gz $CLIENT.conf ca.crt $CLIENT.crt $CLIENT.key $CLIENT.ovpn
+			zip ../ovpn-$CLIENT.zip $CLIENT.conf ca.crt $CLIENT.crt $CLIENT.key $CLIENT.ovpn
 			cd ~/
 			rm -rf ovpn-$CLIENT
 			echo ""
-			echo "Client $CLIENT added, certs available at ~/ovpn-$CLIENT.tar.gz"
+			echo "Client $CLIENT added, certs available at ~/ovpn-$CLIENT.zip"
 			exit
 			;;
 			2)
@@ -149,6 +158,9 @@ else
 	echo "Please, use one word only, no special characters"
 	read -p "Client name: " -e -i client CLIENT
 	echo ""
+        echo "Do you like secure ${CLIENT}'s  private key with password?"
+        read -p "Use password for private key [y/n]:" -e -i y USEPASS
+	echo ""
 	echo "Okay, that was all I needed. We are ready to setup your OpenVPN server now"
 	read -n1 -r -p "Press any key to continue..."
 	apt-get update
@@ -182,7 +194,12 @@ else
 	# Now the client keys. We need to set KEY_CN or the stupid pkitool will cry
 	export KEY_CN="$CLIENT"
 	export EASY_RSA="${EASY_RSA:-.}"
-	"$EASY_RSA/pkitool" $CLIENT
+        if [ $USEPASS = 'y' ];
+        then
+        	"$EASY_RSA/pkitool" --pass $CLIENT
+        else
+        	"$EASY_RSA/pkitool" $CLIENT
+        fi
 	# DH params
 	. /etc/openvpn/easy-rsa/2.0/build-dh
 	# Let's configure the server
@@ -259,12 +276,12 @@ else
 	cat $CLIENT.key >> $CLIENT.ovpn
 	echo -e "</key>\n" >> $CLIENT.ovpn
 
-	tar -czf ../ovpn-$CLIENT.tar.gz $CLIENT.conf ca.crt $CLIENT.crt $CLIENT.key $CLIENT.ovpn
+	zip ../ovpn-$CLIENT.zip $CLIENT.conf ca.crt $CLIENT.crt $CLIENT.key $CLIENT.ovpn
 	cd ~/
 	rm -rf ovpn-$CLIENT
 	echo ""
 	echo "Finished!"
 	echo ""
-	echo "Your client config is available at ~/ovpn-$CLIENT.tar.gz"
+	echo "Your client config is available at ~/ovpn-$CLIENT.zip"
 	echo "If you want to add more clients, you simply need to run this script another time!"
 fi
